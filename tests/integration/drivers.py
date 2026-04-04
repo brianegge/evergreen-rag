@@ -26,7 +26,7 @@ class PostgresDriver(Driver):
     def starting(self):
         super().starting()
         subprocess.run(
-            ["docker", "compose", "up", "-d", "db"],
+            ["podman-compose", "up", "-d", "db"],
             check=True,
             capture_output=True,
         )
@@ -37,7 +37,7 @@ class PostgresDriver(Driver):
     def stopping(self):
         self._cleanup_test_data()
         subprocess.run(
-            ["docker", "compose", "stop", "db"],
+            ["podman-compose", "stop", "db"],
             check=True,
             capture_output=True,
         )
@@ -47,7 +47,7 @@ class PostgresDriver(Driver):
         deadline = time.time() + timeout
         while time.time() < deadline:
             result = subprocess.run(
-                ["docker", "compose", "exec", "db", "pg_isready", "-U", "evergreen"],
+                ["podman", "exec", "evergreen-rag_db_1", "pg_isready", "-U", "evergreen"],
                 capture_output=True,
             )
             if result.returncode == 0:
@@ -60,7 +60,7 @@ class PostgresDriver(Driver):
         init_sql = SCRIPTS_DIR / "init-db.sql"
         subprocess.run(
             [
-                "docker", "compose", "exec", "-T", "db",
+                "podman", "exec", "-i", "evergreen-rag_db_1",
                 "psql", "-U", "evergreen", "-d", "evergreen",
             ],
             input=init_sql.read_bytes(),
@@ -149,7 +149,7 @@ class EmbeddingServiceDriver(Driver):
     def starting(self):
         super().starting()
         subprocess.run(
-            ["docker", "compose", "up", "-d", "ollama"],
+            ["podman-compose", "up", "-d", "ollama"],
             check=True,
             capture_output=True,
         )
@@ -158,7 +158,7 @@ class EmbeddingServiceDriver(Driver):
 
     def stopping(self):
         subprocess.run(
-            ["docker", "compose", "stop", "ollama"],
+            ["podman-compose", "stop", "ollama"],
             check=True,
             capture_output=True,
         )
@@ -185,7 +185,7 @@ class EmbeddingServiceDriver(Driver):
         models = [m["name"] for m in resp.json().get("models", [])]
         if not any(self._model in m for m in models):
             subprocess.run(
-                ["docker", "compose", "exec", "ollama", "ollama", "pull", self._model],
+                ["podman", "exec", "evergreen-rag_ollama_1", "ollama", "pull", self._model],
                 check=True,
                 timeout=300,
             )

@@ -37,11 +37,8 @@ class IngestSuite:
         stats = pipeline.run(full=True)
 
         result.log(
-            "Ingest stats: total=%d extracted=%d embedded=%d failed=%d",
-            stats.total,
-            stats.extracted,
-            stats.embedded,
-            stats.failed,
+            f"Ingest stats: total={stats.total} extracted={stats.extracted} "
+            f"embedded={stats.embedded} failed={stats.failed}"
         )
 
         # Verify records were processed
@@ -117,13 +114,11 @@ class RetrievalQualitySuite:
             if found:
                 passed += 1
                 result.log(
-                    "PASS [%s]: record %d found in top 5 for '%s'",
-                    q["id"], expected_id, query_text,
+                    f"PASS [{q['id']}]: record {expected_id} found in top 5 for '{query_text}'"
                 )
             else:
                 result.log(
-                    "FAIL [%s]: record %d NOT in top 5 for '%s' (got %s)",
-                    q["id"], expected_id, query_text, result_ids,
+                    f"FAIL [{q['id']}]: record {expected_id} NOT in top 5 for '{query_text}' (got {result_ids})"
                 )
 
         # At least 70% of known-item queries should succeed
@@ -182,13 +177,11 @@ class RetrievalQualitySuite:
             if found:
                 passed += 1
                 result.log(
-                    "PASS: record %d found for synonym query '%s' (%s)",
-                    sq["expected"], sq["query"], sq["note"],
+                    f"PASS: record {sq['expected']} found for synonym query '{sq['query']}' ({sq['note']})"
                 )
             else:
                 result.log(
-                    "FAIL: record %d NOT found for synonym query '%s' (got %s)",
-                    sq["expected"], sq["query"], result_ids,
+                    f"FAIL: record {sq['expected']} NOT found for synonym query '{sq['query']}' (got {result_ids})"
                 )
 
         pass_rate = passed / total if total > 0 else 0
@@ -238,8 +231,7 @@ class RetrievalQualitySuite:
             if response.results:
                 top_sim = response.results[0].similarity
                 result.log(
-                    "Negative query '%s': top similarity = %.3f (threshold=%.2f)",
-                    query_text, top_sim, threshold,
+                    f"Negative query '{query_text}': top similarity = {top_sim:.3f} (threshold={threshold:.2f})"
                 )
 
 

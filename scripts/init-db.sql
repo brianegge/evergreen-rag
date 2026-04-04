@@ -25,14 +25,13 @@ CREATE TABLE IF NOT EXISTS rag.biblio_embedding (
     record      BIGINT NOT NULL REFERENCES biblio.record_entry(id) ON DELETE CASCADE,
     chunk_index SMALLINT NOT NULL DEFAULT 0,
     chunk_text  TEXT NOT NULL,
-    embedding   vector NOT NULL,
+    embedding   vector(768) NOT NULL,
     model_name  TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(record, chunk_index, model_name)
 );
 
--- HNSW index for approximate nearest neighbor search
--- Dimension will be set by the first insert; this uses cosine distance
+-- HNSW index for approximate nearest neighbor search (768 = nomic-embed-text dims)
 CREATE INDEX IF NOT EXISTS idx_biblio_embedding_vec
     ON rag.biblio_embedding
     USING hnsw (embedding vector_cosine_ops);
