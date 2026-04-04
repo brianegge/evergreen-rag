@@ -10,6 +10,7 @@ from fastapi import FastAPI
 
 from evergreen_rag.api.routes import router
 from evergreen_rag.embedding.service import EmbeddingService
+from evergreen_rag.generation.service import GenerationService
 from evergreen_rag.search.vector_search import VectorSearch
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.embedding_service = EmbeddingService()
     app.state.vector_search = VectorSearch()
     app.state.vector_search.open()
+
+    # Generation service is optional
+    try:
+        gen_service = GenerationService()
+        if gen_service.health_check():
+            app.state.generation_service = gen_service
+            logger.info(
+                "Generation service initialized (model=%s)",
+                gen_service.model,
+            )
+        else:
+            app.state.generation_service = None
+            logger.info("Generation service unavailable, running without LLM")
+    except Exception:
+        app.state.generation_service = None
+        logger.info(
+            "Generation service not configured, running without LLM",
+            exc_info=True,
+        )
+
     logger.info("RAG service started")
 
     yield

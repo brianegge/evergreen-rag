@@ -23,9 +23,11 @@ def app():
     # Mock the services on app.state
     mock_embedding = MagicMock()
     mock_search = MagicMock()
+    mock_generation = MagicMock()
 
     application.state.embedding_service = mock_embedding
     application.state.vector_search = mock_search
+    application.state.generation_service = mock_generation
 
     return application
 
@@ -303,6 +305,244 @@ class TestReciprocalRankFusion:
         merged = reciprocal_rank_fusion([1, 2, 3], [2, 3, 4])
         for _, score in merged:
             assert score > 0
+
+
+class TestSearchWithGeneration:
+    """Tests for POST /search with generate=true."""
+
+    def test_search_with_generate_returns_summary(self, client, app):
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="grief teens",
+            results=[
+                SearchResult(
+                    record_id=1, similarity=0.9, chunk_text="grief book"
+                ),
+            ],
+            total=1,
+            model="nomic-embed-text",
+        )
+        app.state.generation_service.summarize.return_value = (
+            "This result covers grief resources for teens."
+        )
+
+        resp = client.post(
+            "/search",
+            json={"query": "grief teens", "generate": True},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["generated_text"] == (
+            "This result covers grief resources for teens."
+        )
+        assert data["total"] == 1
+
+    def test_search_generate_false_no_summary(self, client, app):
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test", results=[], total=0, model="nomic-embed-text",
+        )
+
+        resp = client.post(
+            "/search", json={"query": "test", "generate": False},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["generated_text"] is None
+        app.state.generation_service.summarize.assert_not_called()
+
+    def test_search_generate_service_unavailable(self, client, app):
+        """Search still returns results when generation is None."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test",
+            results=[
+                SearchResult(
+                    record_id=1, similarity=0.9, chunk_text="book"
+                ),
+            ],
+            total=1,
+            model="nomic-embed-text",
+        )
+        app.state.generation_service = None
+
+        resp = client.post(
+            "/search", json={"query": "test", "generate": True},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["generated_text"] is None
+
+    def test_search_generate_failure_still_returns_results(
+        self, client, app
+    ):
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test",
+            results=[
+                SearchResult(
+                    record_id=1, similarity=0.9, chunk_text="book"
+                ),
+            ],
+            total=1,
+            model="nomic-embed-text",
+        )
+        app.state.generation_service.summarize.side_effect = Exception(
+            "LLM down"
+        )
+
+        resp = client.post(
+            "/search", json={"query": "test", "generate": True},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["generated_text"] is None
+
+    def test_search_generate_empty_results_skips_generation(
+        self, client, app
+    ):
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test", results=[], total=0, model="nomic-embed-text",
+        )
+
+        resp = client.post(
+            "/search", json={"query": "test", "generate": True},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["generated_text"] is None
+        app.state.generation_service.summarize.assert_not_called()
+
+
+class TestRecommendEndpoint:
+    """Tests for POST /recommend."""
+
+    def test_recommend_success(self, client, app):
+        app.state.generation_service.recommend.return_value = (
+            "Start with The Great Gatsby."
+        )
+        resp = client.post(
+            "/recommend",
+            json={
+                "query": "fitzgerald",
+                "results": [
+                    {
+                        "record_id": 1,
+                        "similarity": 0.9,
+                        "chunk_text": "The Great Gatsby",
+                    },
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["recommendations"] == "Start with The Great Gatsby."
+
+    def test_recommend_no_generation_service(self, client, app):
+        app.state.generation_service = None
+        resp = client.post(
+            "/recommend",
+            json={
+                "query": "test",
+                "results": [
+                    {
+                        "record_id": 1,
+                        "similarity": 0.9,
+                        "chunk_text": "book",
+                    },
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["recommendations"] is None
+
+    def test_recommend_generation_failure(self, client, app):
+        app.state.generation_service.recommend.side_effect = Exception("fail")
+        resp = client.post(
+            "/recommend",
+            json={
+                "query": "test",
+                "results": [
+                    {
+                        "record_id": 1,
+                        "similarity": 0.9,
+                        "chunk_text": "book",
+                    },
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["recommendations"] is None
+
+
+class TestRefineEndpoint:
+    """Tests for POST /refine."""
+
+    def test_refine_success(self, client, app):
+        app.state.generation_service.refine.return_value = [
+            "F. Scott Fitzgerald biography",
+            "Jazz Age literature",
+        ]
+        resp = client.post(
+            "/refine",
+            json={
+                "query": "fitzgerald",
+                "results": [
+                    {
+                        "record_id": 1,
+                        "similarity": 0.9,
+                        "chunk_text": "The Great Gatsby",
+                    },
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["suggestions"]) == 2
+        assert "F. Scott Fitzgerald biography" in data["suggestions"]
+
+    def test_refine_no_generation_service(self, client, app):
+        app.state.generation_service = None
+        resp = client.post(
+            "/refine",
+            json={
+                "query": "test",
+                "results": [
+                    {
+                        "record_id": 1,
+                        "similarity": 0.9,
+                        "chunk_text": "book",
+                    },
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["suggestions"] == []
+
+    def test_refine_generation_failure(self, client, app):
+        app.state.generation_service.refine.side_effect = Exception("fail")
+        resp = client.post(
+            "/refine",
+            json={
+                "query": "test",
+                "results": [
+                    {
+                        "record_id": 1,
+                        "similarity": 0.9,
+                        "chunk_text": "book",
+                    },
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["suggestions"] == []
 
 
 class TestMergedSearchEndpoint:

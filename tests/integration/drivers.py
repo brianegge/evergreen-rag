@@ -191,6 +191,67 @@ class EmbeddingServiceDriver(Driver):
             )
 
 
+class GenerationServiceDriver(Driver):
+    """Driver that ensures a small LLM model is available in Ollama for generation tests."""
+
+    def __init__(
+        self,
+        name: str = "generation",
+        model: str = "tinyllama",
+        **kwargs,
+    ):
+        super().__init__(name=name, **kwargs)
+        self._model = model
+        self._host = "localhost"
+        self._port = 11434
+
+    @property
+    def base_url(self) -> str:
+        return f"http://{self._host}:{self._port}"
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    def starting(self):
+        super().starting()
+        # Ollama should already be running from EmbeddingServiceDriver
+        self._wait_for_ready()
+        self._pull_model()
+
+    def stopping(self):
+        super().stopping()
+
+    def _wait_for_ready(self, timeout: int = 60):
+        import httpx
+
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                resp = httpx.get(f"{self.base_url}/api/tags", timeout=5)
+                if resp.status_code == 200:
+                    return
+            except httpx.ConnectError:
+                pass
+            time.sleep(2)
+        raise TimeoutError("Ollama did not become ready for generation")
+
+    def _pull_model(self):
+        import httpx
+
+        resp = httpx.get(f"{self.base_url}/api/tags", timeout=10)
+        models = [m["name"] for m in resp.json().get("models", [])]
+        if not any(self._model in m for m in models):
+            subprocess.run(
+                [
+                    "podman", "exec", "evergreen-rag_ollama_1",
+                    "ollama", "pull", self._model,
+                ],
+                check=True,
+                timeout=600,
+            )
+
+
 def load_quality_queries() -> list[dict]:
     """Load quality query test cases from fixtures."""
     path = FIXTURES_DIR / "quality_queries.json"

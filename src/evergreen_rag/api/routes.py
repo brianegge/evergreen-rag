@@ -54,6 +54,55 @@ class StatsResponse(BaseModel):
     model_name: str | None
 
 
+class GeneratedSearchRequest(BaseModel):
+    """Request body for search with optional generation."""
+
+    query: str
+    limit: int = Field(default=10, ge=1, le=100)
+    org_unit: int | None = None
+    format: str | None = None
+    min_similarity: float = Field(default=0.0, ge=0.0, le=1.0)
+    generate: bool = False
+
+
+class GeneratedSearchResponse(BaseModel):
+    """Search response with optional generated text."""
+
+    query: str
+    results: list[SearchResult]
+    total: int
+    model: str
+    generated_text: str | None = None
+
+
+class RecommendRequest(BaseModel):
+    """Request body for reading recommendations."""
+
+    query: str
+    results: list[SearchResult]
+
+
+class RecommendResponse(BaseModel):
+    """Response with reading recommendations."""
+
+    query: str
+    recommendations: str | None = None
+
+
+class RefineRequest(BaseModel):
+    """Request body for search refinement suggestions."""
+
+    query: str
+    results: list[SearchResult]
+
+
+class RefineResponse(BaseModel):
+    """Response with refined query suggestions."""
+
+    query: str
+    suggestions: list[str]
+
+
 class MergedSearchRequest(BaseModel):
     """Request body for merged keyword + semantic search."""
 
@@ -104,28 +153,116 @@ def reciprocal_rank_fusion(
 # ------------------------------------------------------------------
 
 
-@router.post("/search", response_model=SearchResponse)
-async def search(query: SearchQuery, request: Request) -> SearchResponse:
+@router.post("/search", response_model=GeneratedSearchResponse)
+async def search(
+    body: GeneratedSearchRequest, request: Request,
+) -> GeneratedSearchResponse:
     """Perform semantic search against the catalog.
 
     Embeds the query text, then searches for similar records.
+    If ``generate=true`` and a generation service is available,
+    a natural language summary is appended to the response.
     """
     embedding_service = request.app.state.embedding_service
     vector_search = request.app.state.vector_search
 
+    search_query = SearchQuery(
+        query=body.query,
+        limit=body.limit,
+        org_unit=body.org_unit,
+        format=body.format,
+        min_similarity=body.min_similarity,
+    )
+
     try:
-        query_embedding = embedding_service.embed_text(query.query)
+        query_embedding = embedding_service.embed_text(body.query)
     except Exception as exc:
         logger.exception("Failed to embed query")
-        raise HTTPException(status_code=503, detail=f"Embedding service error: {exc}") from exc
+        raise HTTPException(
+            status_code=503, detail=f"Embedding service error: {exc}"
+        ) from exc
 
     try:
-        response = vector_search.similarity_search(query_embedding, query)
+        response = vector_search.similarity_search(
+            query_embedding, search_query
+        )
     except Exception as exc:
         logger.exception("Search failed")
-        raise HTTPException(status_code=503, detail=f"Search error: {exc}") from exc
+        raise HTTPException(
+            status_code=503, detail=f"Search error: {exc}"
+        ) from exc
 
-    return response
+    generated_text = None
+    if body.generate and response.results:
+        gen_service = getattr(
+            request.app.state, "generation_service", None
+        )
+        if gen_service is not None:
+            try:
+                generated_text = gen_service.summarize(
+                    body.query, response.results
+                )
+            except Exception:
+                logger.debug(
+                    "Generation failed, returning results without summary",
+                    exc_info=True,
+                )
+
+    return GeneratedSearchResponse(
+        query=response.query,
+        results=response.results,
+        total=response.total,
+        model=response.model,
+        generated_text=generated_text,
+    )
+
+
+@router.post("/recommend", response_model=RecommendResponse)
+async def recommend(
+    body: RecommendRequest, request: Request,
+) -> RecommendResponse:
+    """Generate reading recommendations from search results.
+
+    Degrades gracefully: returns null recommendations if the
+    generation service is unavailable.
+    """
+    gen_service = getattr(
+        request.app.state, "generation_service", None
+    )
+    if gen_service is None:
+        return RecommendResponse(query=body.query, recommendations=None)
+
+    try:
+        text = gen_service.recommend(body.query, body.results)
+    except Exception:
+        logger.debug("Recommend generation failed", exc_info=True)
+        text = None
+
+    return RecommendResponse(query=body.query, recommendations=text)
+
+
+@router.post("/refine", response_model=RefineResponse)
+async def refine(
+    body: RefineRequest, request: Request,
+) -> RefineResponse:
+    """Suggest refined or related search queries.
+
+    Degrades gracefully: returns an empty list if the generation
+    service is unavailable.
+    """
+    gen_service = getattr(
+        request.app.state, "generation_service", None
+    )
+    if gen_service is None:
+        return RefineResponse(query=body.query, suggestions=[])
+
+    try:
+        suggestions = gen_service.refine(body.query, body.results)
+    except Exception:
+        logger.debug("Refine generation failed", exc_info=True)
+        suggestions = []
+
+    return RefineResponse(query=body.query, suggestions=suggestions)
 
 
 @router.post("/search/merged", response_model=SearchResponse)
@@ -253,12 +390,23 @@ async def health(request: Request) -> HealthResponse:
     except Exception:
         logger.debug("DB health check failed", exc_info=True)
 
+    generation_ok = False
+    gen_service = getattr(request.app.state, "generation_service", None)
+    if gen_service is not None:
+        try:
+            generation_ok = gen_service.health_check()
+        except Exception:
+            logger.debug("Generation health check failed", exc_info=True)
+
     checks = {
         "embedding_service": embedding_ok,
         "database": db_ok,
+        "generation_service": generation_ok,
     }
 
-    status = "ok" if all(checks.values()) else "degraded"
+    # Generation is optional — only core services determine degraded
+    core_ok = embedding_ok and db_ok
+    status = "ok" if core_ok else "degraded"
 
     return HealthResponse(status=status, checks=checks)
 

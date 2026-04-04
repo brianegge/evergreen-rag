@@ -10,7 +10,7 @@ All endpoints accept and return JSON. Set `Content-Type: application/json` for P
 
 Perform a semantic search against the catalog using natural language.
 
-### Request Body (`SearchQuery`)
+### Request Body (`GeneratedSearchRequest`)
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -19,8 +19,9 @@ Perform a semantic search against the catalog using natural language.
 | `org_unit` | integer | no | null | Filter by Evergreen org unit ID |
 | `format` | string | no | null | Filter by item format (e.g., "book", "dvd") |
 | `min_similarity` | float | no | 0.0 | Minimum cosine similarity threshold (0.0-1.0) |
+| `generate` | boolean | no | false | If true, append a generated natural language summary |
 
-### Response Body (`SearchResponse`)
+### Response Body (`GeneratedSearchResponse`)
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -28,6 +29,7 @@ Perform a semantic search against the catalog using natural language.
 | `results` | array | List of `SearchResult` objects |
 | `total` | integer | Number of results returned |
 | `model` | string | Embedding model used |
+| `generated_text` | string or null | LLM-generated summary (null if generation unavailable or not requested) |
 
 Each `SearchResult` contains:
 
@@ -53,7 +55,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**Response (without generation):**
 
 ```json
 {
@@ -71,9 +73,37 @@ Content-Type: application/json
     }
   ],
   "total": 2,
-  "model": "nomic-embed-text"
+  "model": "nomic-embed-text",
+  "generated_text": null
 }
 ```
+
+**Request (with generation):**
+
+```json
+POST /search
+Content-Type: application/json
+
+{
+  "query": "books about coping with grief for teenagers",
+  "limit": 5,
+  "generate": true
+}
+```
+
+**Response (with generation):**
+
+```json
+{
+  "query": "books about coping with grief for teenagers",
+  "results": [ ... ],
+  "total": 2,
+  "model": "nomic-embed-text",
+  "generated_text": "These results include two books specifically written for teenagers dealing with grief..."
+}
+```
+
+> **Note:** If the generation service is unavailable or the LLM fails, `generated_text` will be `null` and search results are still returned normally.
 
 ### Error Responses
 
@@ -147,6 +177,112 @@ Content-Type: application/json
   "model": "nomic-embed-text"
 }
 ```
+
+---
+
+## POST /recommend
+
+Generate reading recommendations from search results using the LLM.
+
+### Request Body (`RecommendRequest`)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | yes | The original search query |
+| `results` | array | yes | List of `SearchResult` objects to generate recommendations from |
+
+### Response Body (`RecommendResponse`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | string | The original query text |
+| `recommendations` | string or null | LLM-generated reading recommendations (null if service unavailable) |
+
+### Example
+
+**Request:**
+
+```json
+POST /recommend
+Content-Type: application/json
+
+{
+  "query": "books about coping with grief for teenagers",
+  "results": [
+    {
+      "record_id": 54321,
+      "similarity": 0.87,
+      "chunk_text": "The Grieving Teen: A Guide for Teenagers and Their Friends"
+    }
+  ]
+}
+```
+
+**Response:**
+
+```json
+{
+  "query": "books about coping with grief for teenagers",
+  "recommendations": "I'd recommend starting with 'The Grieving Teen' as it directly addresses..."
+}
+```
+
+> **Note:** Returns `null` for `recommendations` if the generation service is unavailable.
+
+---
+
+## POST /refine
+
+Suggest refined or related search queries using the LLM.
+
+### Request Body (`RefineRequest`)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | yes | The original search query |
+| `results` | array | yes | List of `SearchResult` objects to analyze for refinement |
+
+### Response Body (`RefineResponse`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | string | The original query text |
+| `suggestions` | array[string] | List of suggested refined search queries (empty if service unavailable) |
+
+### Example
+
+**Request:**
+
+```json
+POST /refine
+Content-Type: application/json
+
+{
+  "query": "fitzgerald novels",
+  "results": [
+    {
+      "record_id": 1,
+      "similarity": 0.95,
+      "chunk_text": "The Great Gatsby by F. Scott Fitzgerald"
+    }
+  ]
+}
+```
+
+**Response:**
+
+```json
+{
+  "query": "fitzgerald novels",
+  "suggestions": [
+    "F. Scott Fitzgerald biography",
+    "Jazz Age literature",
+    "1920s American novels"
+  ]
+}
+```
+
+> **Note:** Returns an empty `suggestions` list if the generation service is unavailable.
 
 ---
 

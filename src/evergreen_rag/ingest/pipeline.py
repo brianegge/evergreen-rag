@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 import psycopg
 
 from evergreen_rag.embedding.service import EmbeddingService
-from evergreen_rag.extractor.marc_extractor import extract_record
+from evergreen_rag.extractor.marc_extractor import detect_language, extract_record
+from evergreen_rag.models.embedding import EmbeddingResponse
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +132,7 @@ class IngestPipeline:
         """Extract, embed, and store a batch of records."""
         texts: list[str] = []
         extracted_ids: list[int] = []
+        languages: list[str] = []
 
         for record_id, marc_xml in batch:
             record = extract_record(marc_xml, record_id=record_id)
@@ -144,12 +146,13 @@ class IngestPipeline:
                 continue
             texts.append(text)
             extracted_ids.append(record_id)
+            languages.append(detect_language(marc_xml))
 
         if not texts:
             return
 
         try:
-            response = self.embedding_service.embed_batch(texts)
+            response = self._embed_with_languages(texts, languages)
         except Exception:
             logger.exception("Embedding failed for batch of %d", len(texts))
             stats.failed += len(texts)
@@ -170,6 +173,42 @@ class IngestPipeline:
             conn.commit()
 
         self._log_ingest(conn, extracted_ids)
+
+    def _embed_with_languages(
+        self, texts: list[str], languages: list[str]
+    ) -> EmbeddingResponse:
+        """Embed texts, using per-language models when a model_map is configured."""
+        if not self.embedding_service.model_map:
+            return self.embedding_service.embed_batch(texts)
+
+        # Group by resolved model to batch efficiently
+        from collections import defaultdict
+
+        model_groups: dict[str, list[tuple[int, str]]] = defaultdict(list)
+        for idx, (text, lang) in enumerate(zip(texts, languages)):
+            model = self.embedding_service._resolve_model(lang)
+            model_groups[model].append((idx, text))
+
+        # Embed each group and reassemble in original order
+        all_embeddings: list[list[float]] = [[] for _ in texts]
+        last_response_model = self.embedding_service.model
+        last_dimensions = 0
+
+        for model, items in model_groups.items():
+            group_texts = [t for _, t in items]
+            resp = self.embedding_service.embed_batch_with_language(
+                group_texts, languages[items[0][0]]
+            )
+            last_response_model = resp.model
+            last_dimensions = resp.dimensions
+            for (orig_idx, _), emb in zip(items, resp.embeddings):
+                all_embeddings[orig_idx] = emb
+
+        return EmbeddingResponse(
+            embeddings=all_embeddings,
+            model=last_response_model,
+            dimensions=last_dimensions,
+        )
 
     def _store_embedding(
         self,

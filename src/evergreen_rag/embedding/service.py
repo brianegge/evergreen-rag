@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Any
@@ -19,6 +20,11 @@ class EmbeddingService:
 
     Prefers the ``ollama`` Python package for simplicity and falls back
     to raw ``httpx`` requests when necessary.
+
+    Supports per-language model selection via *model_map*.  When a map is
+    configured, ``embed_text_with_language`` picks the model matching the
+    given MARC language code, falling back to the ``"*"`` wildcard entry
+    or the default single model.
     """
 
     def __init__(
@@ -27,6 +33,7 @@ class EmbeddingService:
         model: str | None = None,
         timeout: float = 60.0,
         max_retries: int = 3,
+        model_map: dict[str, str] | None = None,
     ) -> None:
         self.ollama_url = ollama_url or os.environ.get(
             "OLLAMA_URL", "http://localhost:11434"
@@ -35,6 +42,7 @@ class EmbeddingService:
         self.timeout = timeout
         self.max_retries = max_retries
         self._dimensions: int | None = None
+        self.model_map: dict[str, str] = model_map or _load_model_map_from_env()
 
         # Ollama Python client
         self._client = ollama_pkg.Client(host=self.ollama_url, timeout=httpx.Timeout(self.timeout))
@@ -51,6 +59,25 @@ class EmbeddingService:
     def embed_batch(self, texts: list[str]) -> EmbeddingResponse:
         """Embed multiple texts and return an ``EmbeddingResponse``."""
         request = EmbeddingRequest(texts=texts, model=self.model)
+        return self._embed_via_ollama(request)
+
+    def embed_text_with_language(self, text: str, language: str) -> list[float]:
+        """Embed *text* using the model configured for *language*.
+
+        If no ``model_map`` is configured or the language has no mapping,
+        falls back to the default model (backward-compatible).
+        """
+        model = self._resolve_model(language)
+        request = EmbeddingRequest(texts=[text], model=model)
+        response = self._embed_via_ollama(request)
+        return response.embeddings[0]
+
+    def embed_batch_with_language(
+        self, texts: list[str], language: str
+    ) -> EmbeddingResponse:
+        """Embed a batch of texts using the model for *language*."""
+        model = self._resolve_model(language)
+        request = EmbeddingRequest(texts=texts, model=model)
         return self._embed_via_ollama(request)
 
     def embed_request(self, request: EmbeddingRequest) -> EmbeddingResponse:
@@ -145,6 +172,17 @@ class EmbeddingService:
             dimensions=dimensions,
         )
 
+    def _resolve_model(self, language: str) -> str:
+        """Pick the embedding model for the given MARC language code."""
+        if not self.model_map:
+            return self.model
+        lang = language.lower()
+        if lang in self.model_map:
+            return self.model_map[lang]
+        if "*" in self.model_map:
+            return self.model_map["*"]
+        return self.model
+
     def _health_check_httpx(self) -> bool:
         """Check Ollama health via raw HTTP GET."""
         try:
@@ -153,3 +191,24 @@ class EmbeddingService:
                 return resp.status_code == 200
         except Exception:
             return False
+
+
+def _load_model_map_from_env() -> dict[str, str]:
+    """Load a language-to-model mapping from ``EMBEDDING_MODEL_MAP`` env var.
+
+    Expected format is a JSON object, e.g.::
+
+        EMBEDDING_MODEL_MAP='{"eng": "nomic-embed-text", "spa": "multi-e5"}'
+
+    Returns an empty dict if the env var is unset or invalid.
+    """
+    raw = os.environ.get("EMBEDDING_MODEL_MAP", "")
+    if not raw:
+        return {}
+    try:
+        mapping = json.loads(raw)
+        if isinstance(mapping, dict):
+            return {k: str(v) for k, v in mapping.items()}
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("Invalid EMBEDDING_MODEL_MAP env var, ignoring: %s", raw)
+    return {}

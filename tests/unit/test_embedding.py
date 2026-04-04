@@ -199,6 +199,108 @@ class TestHealthCheckFallback:
             assert service.health_check() is True
 
 
+class TestMultiLanguageModelSelection:
+    def test_resolve_model_with_map(self):
+        """Model map selects the correct model per language."""
+        with patch("evergreen_rag.embedding.service.ollama_pkg"):
+            svc = EmbeddingService(
+                model="default-model",
+                model_map={
+                    "eng": "nomic-embed-text",
+                    "spa": "multilingual-e5-large",
+                    "*": "fallback-model",
+                },
+            )
+        assert svc._resolve_model("eng") == "nomic-embed-text"
+        assert svc._resolve_model("spa") == "multilingual-e5-large"
+        assert svc._resolve_model("fre") == "fallback-model"  # wildcard
+        assert svc._resolve_model("und") == "fallback-model"  # wildcard
+
+    def test_resolve_model_no_map(self):
+        """Without model_map, default model is always returned."""
+        with patch("evergreen_rag.embedding.service.ollama_pkg"):
+            svc = EmbeddingService(model="default-model")
+        assert svc._resolve_model("eng") == "default-model"
+        assert svc._resolve_model("spa") == "default-model"
+
+    def test_resolve_model_no_wildcard(self):
+        """Without wildcard, unknown languages fall back to default model."""
+        with patch("evergreen_rag.embedding.service.ollama_pkg"):
+            svc = EmbeddingService(
+                model="default-model",
+                model_map={"eng": "english-model"},
+            )
+        assert svc._resolve_model("eng") == "english-model"
+        assert svc._resolve_model("spa") == "default-model"  # no wildcard, uses default
+
+    def test_embed_text_with_language(self, service, mock_ollama_client):
+        """embed_text_with_language uses default model when no map is set."""
+        mock_ollama_client.embed.return_value = {
+            "embeddings": [FAKE_EMBEDDING],
+        }
+        result = service.embed_text_with_language("hello", "eng")
+        assert result == FAKE_EMBEDDING
+
+    def test_embed_text_with_language_model_map(self, mock_ollama_client):
+        """embed_text_with_language selects model from map."""
+        with patch("evergreen_rag.embedding.service.ollama_pkg") as mock_pkg:
+            mock_client = MagicMock()
+            mock_pkg.Client.return_value = mock_client
+            mock_client.embed.return_value = {"embeddings": [FAKE_EMBEDDING]}
+            svc = EmbeddingService(
+                model="default-model",
+                model_map={"spa": "spanish-model", "*": "default-model"},
+            )
+            result = svc.embed_text_with_language("hola mundo", "spa")
+            assert result == FAKE_EMBEDDING
+            mock_client.embed.assert_called_once_with(
+                model="spanish-model", input=["hola mundo"]
+            )
+
+    def test_model_map_from_env(self, monkeypatch):
+        """EMBEDDING_MODEL_MAP env var is parsed correctly."""
+        monkeypatch.setenv(
+            "EMBEDDING_MODEL_MAP",
+            '{"eng": "nomic-embed-text", "spa": "multilingual-e5-large", "*": "nomic-embed-text"}',
+        )
+        with patch("evergreen_rag.embedding.service.ollama_pkg"):
+            svc = EmbeddingService()
+        assert svc.model_map == {
+            "eng": "nomic-embed-text",
+            "spa": "multilingual-e5-large",
+            "*": "nomic-embed-text",
+        }
+
+    def test_model_map_invalid_env(self, monkeypatch):
+        """Invalid JSON in EMBEDDING_MODEL_MAP results in empty map."""
+        monkeypatch.setenv("EMBEDDING_MODEL_MAP", "not-json")
+        with patch("evergreen_rag.embedding.service.ollama_pkg"):
+            svc = EmbeddingService()
+        assert svc.model_map == {}
+
+    def test_default_single_model_preserved(self, service, mock_ollama_client):
+        """Default single-model behavior works when no model_map is set."""
+        mock_ollama_client.embed.return_value = {
+            "embeddings": [FAKE_EMBEDDING],
+        }
+        assert service.model_map == {}
+        result = service.embed_text("hello")
+        assert result == FAKE_EMBEDDING
+        mock_ollama_client.embed.assert_called_once_with(
+            model="nomic-embed-text", input=["hello"]
+        )
+
+    def test_case_insensitive_language(self):
+        """Language codes are matched case-insensitively."""
+        with patch("evergreen_rag.embedding.service.ollama_pkg"):
+            svc = EmbeddingService(
+                model="default-model",
+                model_map={"eng": "english-model"},
+            )
+        assert svc._resolve_model("ENG") == "english-model"
+        assert svc._resolve_model("Eng") == "english-model"
+
+
 class TestEmbedRequest:
     def test_custom_model_in_request(self, service, mock_ollama_client):
         mock_ollama_client.embed.return_value = {

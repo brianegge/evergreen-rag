@@ -236,3 +236,47 @@ def _find_all(elem: Any, local_name: str) -> list[Any]:
     # Try full namespace URI
     results = elem.findall(f"{{{MARC_NS}}}{local_name}")
     return results
+
+
+# ------------------------------------------------------------------
+# Language detection
+# ------------------------------------------------------------------
+
+
+def detect_language(marc_xml: str | bytes) -> str:
+    """Detect the language code from a MARC-XML record.
+
+    Checks MARC 041$a first (explicit language code), then falls back to
+    controlfield 008 positions 35-37. Returns a 3-letter MARC language
+    code (e.g. ``"eng"``, ``"spa"``, ``"fre"``), or ``"und"``
+    (undetermined) if no language can be detected.
+    """
+    try:
+        if isinstance(marc_xml, str):
+            marc_xml = marc_xml.encode("utf-8")
+        root = etree.fromstring(marc_xml)
+        return _detect_language_from_element(root)
+    except Exception:
+        logger.debug("Failed to detect language from MARC-XML", exc_info=True)
+        return "und"
+
+
+def _detect_language_from_element(elem: Any) -> str:
+    """Detect language from a parsed MARC element.
+
+    Priority: 041$a > 008 positions 35-37.
+    """
+    # Try 041$a (explicit language code)
+    for df in _find_datafields(elem, "041"):
+        code = _get_subfield(df, "a")
+        if code and len(code) == 3 and code.isalpha():
+            return code.lower()
+
+    # Fall back to 008 positions 35-37
+    cf008 = _get_control_field(elem, "008")
+    if cf008 and len(cf008) >= 38:
+        lang = cf008[35:38].strip()
+        if len(lang) == 3 and lang.isalpha():
+            return lang.lower()
+
+    return "und"

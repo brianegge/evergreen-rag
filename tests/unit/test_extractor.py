@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 from evergreen_rag.extractor.marc_extractor import (
+    detect_language,
     extract_record,
     extract_records_from_collection,
 )
@@ -179,6 +180,88 @@ class TestSingleRecordExtraction:
         assert result is not None
         assert result.record_id == 9999
         assert "Test Title" in result.title
+
+
+class TestLanguageDetection:
+    def test_language_from_008(self):
+        """All sample records have 'eng' in 008 positions 35-37."""
+        marc = """<?xml version="1.0"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <controlfield tag="001">1</controlfield>
+            <controlfield tag="008">200101s2020    nyua     b    001 0 eng d</controlfield>
+        </record>
+        """
+        assert detect_language(marc) == "eng"
+
+    def test_language_from_041(self):
+        """041$a takes priority over 008."""
+        marc = """<?xml version="1.0"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <controlfield tag="001">2</controlfield>
+            <controlfield tag="008">200101s2020    nyua     b    001 0 eng d</controlfield>
+            <datafield tag="041" ind1="0" ind2=" ">
+                <subfield code="a">spa</subfield>
+            </datafield>
+        </record>
+        """
+        assert detect_language(marc) == "spa"
+
+    def test_language_041_priority_over_008(self):
+        """When both 041 and 008 are present, 041 wins."""
+        marc = """<?xml version="1.0"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <controlfield tag="001">3</controlfield>
+            <controlfield tag="008">200101s2020    nyua     b    001 0 eng d</controlfield>
+            <datafield tag="041" ind1="0" ind2=" ">
+                <subfield code="a">fre</subfield>
+            </datafield>
+        </record>
+        """
+        assert detect_language(marc) == "fre"
+
+    def test_language_undetermined_no_fields(self):
+        """Returns 'und' when neither 008 nor 041 provide a language."""
+        marc = """<?xml version="1.0"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <controlfield tag="001">4</controlfield>
+        </record>
+        """
+        assert detect_language(marc) == "und"
+
+    def test_language_short_008(self):
+        """Returns 'und' when 008 is too short to contain language."""
+        marc = """<?xml version="1.0"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <controlfield tag="001">5</controlfield>
+            <controlfield tag="008">200101s2020</controlfield>
+        </record>
+        """
+        assert detect_language(marc) == "und"
+
+    def test_language_malformed_xml(self):
+        """Returns 'und' for unparseable XML."""
+        assert detect_language("<not valid") == "und"
+
+    def test_language_from_sample_records(self):
+        """All sample fixture records should be English (via 008)."""
+        # Build a standalone namespaced record XML to test against
+        marc = """<?xml version="1.0"?>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+            <controlfield tag="001">1001</controlfield>
+            <controlfield tag="008">200101s2020    nyua     b    001 0 eng d</controlfield>
+        </record>
+        """
+        assert detect_language(marc) == "eng"
+
+    def test_language_non_namespaced(self):
+        """Works with non-namespaced MARC XML."""
+        marc = """<?xml version="1.0"?>
+        <record>
+            <controlfield tag="001">6</controlfield>
+            <controlfield tag="008">200101s2020    nyua     b    001 0 spa d</controlfield>
+        </record>
+        """
+        assert detect_language(marc) == "spa"
 
 
 # ------------------------------------------------------------------
