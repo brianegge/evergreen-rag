@@ -6,7 +6,10 @@ import logging
 from collections import defaultdict
 from typing import Any
 
+import json
+
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from evergreen_rag.models.search import SearchQuery, SearchResponse, SearchResult
@@ -214,6 +217,87 @@ async def search(
         total=response.total,
         model=response.model,
         generated_text=generated_text,
+    )
+
+
+@router.post("/search/stream")
+async def search_stream(
+    body: GeneratedSearchRequest, request: Request,
+) -> StreamingResponse:
+    """Stream search results followed by token-by-token generation via SSE."""
+    embedding_service = request.app.state.embedding_service
+    vector_search = request.app.state.vector_search
+
+    try:
+        query_embedding = embedding_service.embed_text(body.query)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Embedding service error: {exc}"
+        ) from exc
+
+    try:
+        search_query = SearchQuery(
+            query=body.query,
+            limit=body.limit,
+            min_similarity=body.min_similarity,
+        )
+        response = vector_search.similarity_search(
+            query_embedding, search_query
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503, detail=f"Search error: {exc}"
+        ) from exc
+
+    def event_stream():
+        # Send search results first
+        results_data = {
+            "query": response.query,
+            "results": [
+                {
+                    "record_id": r.record_id,
+                    "similarity": r.similarity,
+                    "chunk_text": r.chunk_text,
+                }
+                for r in response.results
+            ],
+            "total": response.total,
+            "model": response.model,
+        }
+        yield f"event: results\ndata: {json.dumps(results_data)}\n\n"
+
+        # Stream generation tokens if requested
+        if body.generate and response.results:
+            gen_service = getattr(
+                request.app.state, "generation_service", None
+            )
+            if gen_service is not None:
+                try:
+                    for token in gen_service.stream_generate(
+                        "summarize", body.query, response.results
+                    ):
+                        yield (
+                            f"event: token\n"
+                            f"data: {json.dumps({'text': token})}\n\n"
+                        )
+                    yield "event: done\ndata: {}\n\n"
+                except Exception:
+                    logger.debug(
+                        "Stream generation failed", exc_info=True
+                    )
+                    yield "event: done\ndata: {}\n\n"
+            else:
+                yield "event: done\ndata: {}\n\n"
+        else:
+            yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

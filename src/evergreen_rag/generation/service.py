@@ -24,10 +24,18 @@ class GenerationService:
 
     TEMPLATES: dict[str, str] = {
         "summarize": (
-            "You are a helpful library assistant. A patron searched for: \"{query}\"\n\n"
-            "Here are the most relevant catalog records found:\n\n{results}\n\n"
-            "Provide a concise natural language summary of these search results. "
-            "Highlight the most relevant items and explain how they relate to the query."
+            "You are a friendly library assistant helping a patron. "
+            "They searched for: \"{query}\"\n\n"
+            "Here are the matching catalog records:\n\n{results}\n\n"
+            "Write a brief, natural 2-3 sentence response. "
+            "IMPORTANT: When you mention a catalog record, you MUST use the "
+            "exact token ###N### where N is the numeric record ID from the results above. "
+            "For example, if a result says 'record #247', write ###247### in your response. "
+            "The display system will replace ###247### with the formatted linked title. "
+            "Do NOT write out the actual title text yourself. "
+            "Mention 2-3 of the most relevant records using their ###N### tokens. "
+            "Keep it concise. Do NOT start with a greeting or filler phrase. "
+            "Do NOT list every record. Do NOT repeat similarity scores."
         ),
         "recommend": (
             "You are a knowledgeable library reader's advisor. "
@@ -166,6 +174,38 @@ class GenerationService:
             raise ValueError("Empty response from Ollama chat")
 
         return content
+
+    def stream_generate(
+        self, mode: str, query: str, results: list[SearchResult]
+    ):
+        """Yield text chunks from Ollama streaming chat via httpx."""
+        prompt = self._build_prompt(mode, query, results)
+        url = f"{self.ollama_url}/api/chat"
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "options": {
+                "temperature": self.temperature,
+                "num_predict": self.max_tokens,
+            },
+            "stream": True,
+        }
+        import json as _json
+
+        with httpx.Client(timeout=self.timeout) as client:
+            with client.stream("POST", url, json=payload) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if not line:
+                        continue
+                    chunk = _json.loads(line)
+                    content = (
+                        chunk.get("message", {}).get("content", "")
+                    )
+                    if content:
+                        yield content
+                    if chunk.get("done"):
+                        return
 
     def _chat_via_httpx(self, prompt: str) -> str:
         """Fallback: call Ollama chat endpoint via raw HTTP."""

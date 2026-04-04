@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from evergreen_rag.api.routes import router
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 from evergreen_rag.embedding.service import EmbeddingService
 from evergreen_rag.generation.service import GenerationService
 from evergreen_rag.search.vector_search import VectorSearch
@@ -63,4 +68,20 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(router)
+
+    # Serve static files (OPAC JS, staff client, search UI)
+    if STATIC_DIR.is_dir():
+        app.mount(
+            "/static",
+            StaticFiles(directory=str(STATIC_DIR)),
+            name="static",
+        )
+
+        @app.get("/", include_in_schema=False)
+        async def index():
+            return FileResponse(str(STATIC_DIR / "index.html"))
+
     return app
+
+
+app = create_app()
