@@ -1,0 +1,168 @@
+.rag-search-container {
+  padding: 1rem;
+  font-family: inherit;
+}
+
+/* Health status */
+.rag-health-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #999;
+}
+
+.status-dot.healthy {
+  background-color: #28a745;
+}
+
+.status-dot.unhealthy {
+  background-color: #dc3545;
+}
+
+/* Toggle controls */
+.rag-controls {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Search input */
+.rag-search-input {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.rag-search-input input {
+  flex: 1;
+}
+
+.rag-search-btn {
+  white-space: nowrap;
+}
+
+/* Error */
+.rag-error {
+  margin-bottom: 1rem;
+}
+
+/* Loading */
+.rag-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  color: #666;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ddd;
+  border-top-color: #007bff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Results */
+.rag-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.rag-model-badge {
+  background: #e9ecef;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.rag-result-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.rag-result-item:hover {
+  background-color: #f8f9fa;
+}
+
+.result-rank {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ecef;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.result-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-link {
+  font-weight: 600;
+  color: #007bff;
+  text-decoration: none;
+}
+
+.result-link:hover {
+  text-decoration: underline;
+}
+
+.result-similarity {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0.2rem 0 0.4rem;
+}
+
+.result-chunk {
+  font-size: 0.9rem;
+  color: #333;
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
+/* No results */
+.rag-no-results {
+  padding: 1rem 0;
+  color: #666;
+  font-style: italic;
+}

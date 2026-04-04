@@ -1,0 +1,179 @@
+/*
+ * Evergreen RAG -- OPAC Semantic Search Styles
+ *
+ * Minimal styles for the semantic search UI elements. Designed to blend with
+ * Evergreen's default OPAC Bootstrap theme. Override as needed in your local
+ * OPAC stylesheets.
+ */
+
+/* ----- Toggle ----- */
+
+.rag-toggle {
+  margin: 0.5em 0;
+  padding: 0.4em 0;
+}
+
+.rag-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.rag-toggle-input {
+  margin: 0;
+}
+
+.rag-toggle-text {
+  font-weight: 600;
+}
+
+.rag-toggle-hint {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  line-height: 1.2em;
+  text-align: center;
+  border-radius: 50%;
+  background: #6c757d;
+  color: #fff;
+  font-size: 0.75em;
+  cursor: help;
+}
+
+.rag-toggle-input:disabled + .rag-toggle-text {
+  color: #999;
+}
+
+/* ----- Loading ----- */
+
+.rag-loading {
+  padding: 1.5em;
+  text-align: center;
+  color: #555;
+  font-size: 1em;
+}
+
+.rag-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid #ccc;
+  border-top-color: #337ab7;
+  border-radius: 50%;
+  animation: rag-spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4em;
+}
+
+@keyframes rag-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----- Results ----- */
+
+.rag-results {
+  margin: 1em 0;
+}
+
+.rag-results-header h3 {
+  margin: 0 0 0.3em;
+  font-size: 1.2em;
+  color: #333;
+}
+
+.rag-results-meta {
+  margin: 0 0 0.8em;
+  color: #666;
+  font-size: 0.9em;
+}
+
+.rag-results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rag-result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8em;
+  padding: 0.8em 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.rag-result-item:last-child {
+  border-bottom: none;
+}
+
+.rag-result-score {
+  flex-shrink: 0;
+  width: 3em;
+  padding: 0.3em 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85em;
+  color: #337ab7;
+  background: #eef5fc;
+  border-radius: 4px;
+}
+
+.rag-result-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rag-result-title {
+  display: block;
+  font-weight: 600;
+  font-size: 1.05em;
+  color: #337ab7;
+  text-decoration: none;
+  margin-bottom: 0.2em;
+}
+
+.rag-result-title:hover {
+  text-decoration: underline;
+}
+
+.rag-result-chunk {
+  margin: 0;
+  color: #555;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+/* ----- No Results ----- */
+
+.rag-no-results {
+  padding: 1.5em;
+  text-align: center;
+  color: #555;
+}
+
+.rag-hint {
+  font-size: 0.9em;
+  color: #888;
+  font-style: italic;
+}
+
+/* ----- Error ----- */
+
+.rag-error {
+  padding: 1em;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  background: #fff3f3;
+  color: #721c24;
+}
+
+.rag-error p {
+  margin: 0.3em 0;
+}
+
+.rag-error-detail {
+  font-size: 0.85em;
+  color: #999;
+  font-family: monospace;
+}

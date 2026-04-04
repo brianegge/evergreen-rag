@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from evergreen_rag.api.routes import router
+from evergreen_rag.api.routes import reciprocal_rank_fusion, router
 from evergreen_rag.models.search import SearchResponse, SearchResult
 
 FAKE_EMBEDDING = [0.1] * 768
@@ -262,3 +262,227 @@ class TestIngestEndpoint:
             data = resp.json()
             assert data["embedded"] == 7
             assert data["failed"] == 3
+
+
+class TestReciprocalRankFusion:
+    """Unit tests for the RRF helper function."""
+
+    def test_single_ranking(self):
+        merged = reciprocal_rank_fusion([10, 20, 30])
+        ids = [rid for rid, _ in merged]
+        assert ids == [10, 20, 30]
+
+    def test_two_rankings_overlap(self):
+        # Record 20 appears in both rankings at good positions
+        merged = reciprocal_rank_fusion([10, 20, 30], [20, 40, 10])
+        ids = [rid for rid, _ in merged]
+        # 20 appears rank 2 and rank 1 -> highest combined score
+        assert ids[0] == 20
+        # 10 appears rank 1 and rank 3
+        assert 10 in ids
+
+    def test_disjoint_rankings(self):
+        merged = reciprocal_rank_fusion([1, 2], [3, 4])
+        ids = [rid for rid, _ in merged]
+        assert set(ids) == {1, 2, 3, 4}
+
+    def test_weights(self):
+        # Heavily weight the second ranking
+        merged = reciprocal_rank_fusion(
+            [10, 20], [30, 40], weights=[0.1, 10.0]
+        )
+        ids = [rid for rid, _ in merged]
+        # Second ranking's top result should dominate
+        assert ids[0] == 30
+
+    def test_empty_ranking(self):
+        merged = reciprocal_rank_fusion([])
+        assert merged == []
+
+    def test_scores_are_positive(self):
+        merged = reciprocal_rank_fusion([1, 2, 3], [2, 3, 4])
+        for _, score in merged:
+            assert score > 0
+
+
+class TestMergedSearchEndpoint:
+    """Tests for POST /search/merged."""
+
+    def test_merged_search_both_inputs(self, client, app):
+        """Merged search with both semantic query and keyword results."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="grief teenagers",
+            results=[
+                SearchResult(record_id=100, similarity=0.9, chunk_text="coping with grief"),
+                SearchResult(record_id=200, similarity=0.8, chunk_text="teen support"),
+            ],
+            total=2,
+            model="nomic-embed-text",
+        )
+
+        resp = client.post(
+            "/search/merged",
+            json={
+                "query": "grief teenagers",
+                "keyword_results": [200, 300, 400],
+                "limit": 5,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # 200 appears in both rankings, should be ranked high
+        ids = [r["record_id"] for r in data["results"]]
+        assert 200 in ids
+        assert data["total"] <= 5
+
+    def test_merged_search_semantic_only(self, client, app):
+        """Merged search with query but no keyword results."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="python programming",
+            results=[
+                SearchResult(record_id=50, similarity=0.85, chunk_text="python book"),
+            ],
+            total=1,
+            model="nomic-embed-text",
+        )
+
+        resp = client.post(
+            "/search/merged",
+            json={"query": "python programming", "keyword_results": []},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["results"][0]["record_id"] == 50
+        assert data["results"][0]["chunk_text"] == "python book"
+
+    def test_merged_search_keyword_only(self, client, app):
+        """Merged search with keyword results but no query."""
+        resp = client.post(
+            "/search/merged",
+            json={"keyword_results": [10, 20, 30]},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        ids = [r["record_id"] for r in data["results"]]
+        assert ids == [10, 20, 30]
+        # No semantic data, so similarity should be 0
+        for r in data["results"]:
+            assert r["similarity"] == 0.0
+
+    def test_merged_search_rrf_ranking(self, client, app):
+        """Verify RRF produces correct ordering when a record appears in both."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        # Semantic ranking: [1, 2, 3]
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test",
+            results=[
+                SearchResult(record_id=1, similarity=0.9, chunk_text="a"),
+                SearchResult(record_id=2, similarity=0.8, chunk_text="b"),
+                SearchResult(record_id=3, similarity=0.7, chunk_text="c"),
+            ],
+            total=3,
+            model="nomic-embed-text",
+        )
+
+        # Keyword ranking: [2, 4, 1]
+        resp = client.post(
+            "/search/merged",
+            json={
+                "query": "test",
+                "keyword_results": [2, 4, 1],
+                "limit": 10,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        ids = [r["record_id"] for r in data["results"]]
+        # Record 2: semantic rank 2 + keyword rank 1 -> best combined
+        # Record 1: semantic rank 1 + keyword rank 3 -> second best
+        assert ids[0] == 2
+        assert ids[1] == 1
+
+    def test_merged_search_with_weights(self, client, app):
+        """Custom weights shift ranking toward the weighted source."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test",
+            results=[
+                SearchResult(record_id=1, similarity=0.9, chunk_text="a"),
+            ],
+            total=1,
+            model="nomic-embed-text",
+        )
+
+        resp = client.post(
+            "/search/merged",
+            json={
+                "query": "test",
+                "keyword_results": [2],
+                "limit": 10,
+                "weights": {"semantic": 0.1, "keyword": 10.0},
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        ids = [r["record_id"] for r in data["results"]]
+        # Keyword heavily weighted, so record 2 should come first
+        assert ids[0] == 2
+
+    def test_merged_search_neither_input(self, client):
+        """Error when neither query nor keyword_results are provided."""
+        resp = client.post(
+            "/search/merged",
+            json={"keyword_results": []},
+        )
+        assert resp.status_code == 422
+
+    def test_merged_search_embedding_error(self, client, app):
+        """503 when embedding service fails."""
+        app.state.embedding_service.embed_text.side_effect = ConnectionError("down")
+
+        resp = client.post(
+            "/search/merged",
+            json={"query": "test", "keyword_results": [1]},
+        )
+        assert resp.status_code == 503
+        assert "Embedding service error" in resp.json()["detail"]
+
+    def test_merged_search_vector_store_error(self, client, app):
+        """503 when vector search fails."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.side_effect = Exception("db down")
+
+        resp = client.post(
+            "/search/merged",
+            json={"query": "test", "keyword_results": [1]},
+        )
+        assert resp.status_code == 503
+        assert "Search error" in resp.json()["detail"]
+
+    def test_merged_search_limit_applied(self, client, app):
+        """Results are truncated to the requested limit."""
+        app.state.embedding_service.embed_text.return_value = FAKE_EMBEDDING
+        app.state.vector_search.similarity_search.return_value = SearchResponse(
+            query="test",
+            results=[
+                SearchResult(record_id=i, similarity=0.5, chunk_text=f"r{i}")
+                for i in range(1, 6)
+            ],
+            total=5,
+            model="nomic-embed-text",
+        )
+
+        resp = client.post(
+            "/search/merged",
+            json={
+                "query": "test",
+                "keyword_results": list(range(6, 11)),
+                "limit": 3,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 3

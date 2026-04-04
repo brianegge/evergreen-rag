@@ -1,0 +1,78 @@
+<div class="rag-search-container">
+  <!-- Health indicator -->
+  <div class="rag-health-status" *ngIf="healthy !== null">
+    <span class="status-dot" [class.healthy]="healthy" [class.unhealthy]="!healthy"></span>
+    <span class="status-text">
+      Semantic search: {{ healthy ? 'Available' : 'Unavailable' }}
+    </span>
+  </div>
+
+  <!-- Toggle controls -->
+  <div class="rag-controls">
+    <label class="toggle-label">
+      <input type="checkbox" [checked]="semanticEnabled" (change)="toggleSemantic()" />
+      Enable semantic search
+    </label>
+    <label class="toggle-label" *ngIf="semanticEnabled">
+      <input type="checkbox" [checked]="mergedMode" (change)="toggleMergedMode()" />
+      Merge with keyword results
+    </label>
+  </div>
+
+  <!-- Search input -->
+  <div class="rag-search-input" *ngIf="semanticEnabled">
+    <input
+      type="text"
+      class="form-control"
+      placeholder="Describe what you're looking for..."
+      [(ngModel)]="query"
+      (keyup.enter)="search()"
+      [disabled]="loading || !healthy"
+    />
+    <button
+      class="btn btn-primary rag-search-btn"
+      (click)="search()"
+      [disabled]="loading || !query.trim() || !healthy"
+    >
+      <span *ngIf="!loading">Search</span>
+      <span *ngIf="loading">Searching...</span>
+    </button>
+  </div>
+
+  <!-- Error message -->
+  <div class="alert alert-danger rag-error" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <!-- Loading indicator -->
+  <div class="rag-loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Searching catalog...</span>
+  </div>
+
+  <!-- Results -->
+  <div class="rag-results" *ngIf="results.length > 0 && !loading">
+    <div class="rag-results-header">
+      <span>{{ totalResults }} semantic result{{ totalResults !== 1 ? 's' : '' }}</span>
+      <span class="rag-model-badge" *ngIf="modelName">{{ modelName }}</span>
+    </div>
+
+    <div class="rag-result-item" *ngFor="let result of results; let i = index">
+      <div class="result-rank">{{ i + 1 }}</div>
+      <div class="result-body">
+        <a class="result-link" [href]="catalogLink(result.record_id)">
+          Record #{{ result.record_id }}
+        </a>
+        <div class="result-similarity">
+          Similarity: {{ (result.similarity * 100).toFixed(1) }}%
+        </div>
+        <div class="result-chunk">{{ result.chunk_text }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No results -->
+  <div class="rag-no-results" *ngIf="results.length === 0 && !loading && !error && totalResults === 0 && query.trim()">
+    No semantic results found. Try rephrasing your search.
+  </div>
+</div>

@@ -118,7 +118,8 @@ class RetrievalQualitySuite:
                 )
             else:
                 result.log(
-                    f"FAIL [{q['id']}]: record {expected_id} NOT in top 5 for '{query_text}' (got {result_ids})"
+                    f"FAIL [{q['id']}]: record {expected_id} NOT in "
+                    f"top 5 for '{query_text}' (got {result_ids})"
                 )
 
         # At least 70% of known-item queries should succeed
@@ -177,11 +178,13 @@ class RetrievalQualitySuite:
             if found:
                 passed += 1
                 result.log(
-                    f"PASS: record {sq['expected']} found for synonym query '{sq['query']}' ({sq['note']})"
+                    f"PASS: record {sq['expected']} found for "
+                    f"synonym query '{sq['query']}' ({sq['note']})"
                 )
             else:
                 result.log(
-                    f"FAIL: record {sq['expected']} NOT found for synonym query '{sq['query']}' (got {result_ids})"
+                    f"FAIL: record {sq['expected']} NOT found for "
+                    f"synonym query '{sq['query']}' (got {result_ids})"
                 )
 
         pass_rate = passed / total if total > 0 else 0
@@ -231,7 +234,8 @@ class RetrievalQualitySuite:
             if response.results:
                 top_sim = response.results[0].similarity
                 result.log(
-                    f"Negative query '{query_text}': top similarity = {top_sim:.3f} (threshold={threshold:.2f})"
+                    f"Negative query '{query_text}': top similarity "
+                    f"= {top_sim:.3f} (threshold={threshold:.2f})"
                 )
 
 
