@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<collection xmlns="http://www.loc.gov/MARC21/slim">
+
+  <!-- Record 1: Fiction with summary -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1001</controlfield>
+    <controlfield tag="008">200101s2020    nyua     b    001 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780525559474</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Kendi, Ibram X.,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="0">
+      <subfield code="a">How to be an antiracist /</subfield>
+      <subfield code="c">Ibram X. Kendi.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">One World,</subfield>
+      <subfield code="c">2019.</subfield>
+    </datafield>
+    <datafield tag="300" ind1=" " ind2=" ">
+      <subfield code="a">305 pages ;</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">A memoir and guide that explores the concept of antiracism, weaving together ethics, history, law, and science with the author's personal story of awakening to antiracism.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Racism</subfield>
+      <subfield code="z">United States.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Race relations.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Social justice.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 2: Children's fiction -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1002</controlfield>
+    <controlfield tag="008">970101s1997    maua   j      000 1 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780590353427</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Rowling, J. K.,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="0">
+      <subfield code="a">Harry Potter and the sorcerer's stone /</subfield>
+      <subfield code="c">by J.K. Rowling ; illustrations by Mary GrandPré.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">Arthur A. Levine Books,</subfield>
+      <subfield code="c">1998.</subfield>
+    </datafield>
+    <datafield tag="490" ind1="1" ind2=" ">
+      <subfield code="a">Harry Potter ;</subfield>
+      <subfield code="v">bk. 1</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">Rescued from the outrageous neglect of his aunt and uncle, a young boy with a great destiny proves his worth while attending Hogwarts School for Wizards and Witches.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Wizards</subfield>
+      <subfield code="v">Fiction.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Magic</subfield>
+      <subfield code="v">Fiction.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Schools</subfield>
+      <subfield code="v">Fiction.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 3: Science non-fiction -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1003</controlfield>
+    <controlfield tag="008">180101s2018    nyua     b    001 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780525432050</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Mukherjee, Siddhartha,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="4">
+      <subfield code="a">The gene :</subfield>
+      <subfield code="b">an intimate history /</subfield>
+      <subfield code="c">Siddhartha Mukherjee.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">Scribner,</subfield>
+      <subfield code="c">2016.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">A history of the gene and genetic science from Mendel to CRISPR, exploring how genetics has shaped human identity, temperament, and disease.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Genetics</subfield>
+      <subfield code="x">History.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Genes.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Genomics.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 4: Cookbook -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1004</controlfield>
+    <controlfield tag="008">170101s2017    caua     b    000 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9781607747307</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Nosrat, Samin,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="0">
+      <subfield code="a">Salt, fat, acid, heat :</subfield>
+      <subfield code="b">mastering the elements of good cooking /</subfield>
+      <subfield code="c">Samin Nosrat ; illustrated by Wendy MacNaughton.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">Simon &amp; Schuster,</subfield>
+      <subfield code="c">2017.</subfield>
+    </datafield>
+    <datafield tag="505" ind1="0" ind2=" ">
+      <subfield code="a">Salt -- Fat -- Acid -- Heat -- Recipes.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">A guide to cooking that focuses on the four fundamental elements of good cooking: salt, fat, acid, and heat, with recipes and techniques for home cooks.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Cooking.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Food.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 5: Poetry -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1005</controlfield>
+    <controlfield tag="008">210101s2021    dcu          000 1 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780593465271</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Gorman, Amanda,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="4">
+      <subfield code="a">The hill we climb :</subfield>
+      <subfield code="b">an inaugural poem for the country /</subfield>
+      <subfield code="c">Amanda Gorman.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">Viking,</subfield>
+      <subfield code="c">2021.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">The poem delivered at the 2021 presidential inauguration, calling for unity and collective action in America.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">American poetry.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Inaugurations.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 6: Technology -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1006</controlfield>
+    <controlfield tag="008">140101s2014    caua     b    001 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780804139298</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Brynjolfsson, Erik,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="4">
+      <subfield code="a">The second machine age :</subfield>
+      <subfield code="b">work, progress, and prosperity in a time of brilliant technologies /</subfield>
+      <subfield code="c">Erik Brynjolfsson and Andrew McAfee.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">W.W. Norton,</subfield>
+      <subfield code="c">2014.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">An exploration of how digital technologies are transforming the economy, labor markets, and society, arguing that we are entering a new era of automation and artificial intelligence.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Technological innovations</subfield>
+      <subfield code="x">Economic aspects.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Artificial intelligence.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Automation.</subfield>
+    </datafield>
+    <datafield tag="700" ind1="1" ind2=" ">
+      <subfield code="a">McAfee, Andrew,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 7: Grief/self-help (good semantic search test case) -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1007</controlfield>
+    <controlfield tag="008">190101s2019    nyua          000 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9781982123482</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Devine, Megan,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="0">
+      <subfield code="a">It's OK that you're not OK :</subfield>
+      <subfield code="b">meeting grief and loss in a culture that doesn't understand /</subfield>
+      <subfield code="c">Megan Devine.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">Boulder, CO :</subfield>
+      <subfield code="b">Sounds True,</subfield>
+      <subfield code="c">2017.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">A guide for those experiencing grief that validates pain rather than trying to fix it, offering practical tools for navigating loss and supporting others through bereavement.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Grief.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Bereavement</subfield>
+      <subfield code="x">Psychological aspects.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Loss (Psychology)</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 8: YA fiction (teen audience) -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1008</controlfield>
+    <controlfield tag="008">170101s2017    nyua   j      000 1 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780062498533</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Thomas, Angie,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="4">
+      <subfield code="a">The hate u give /</subfield>
+      <subfield code="c">Angie Thomas.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">Balzer + Bray,</subfield>
+      <subfield code="c">2017.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">Sixteen-year-old Starr Carter moves between two worlds: the poor predominantly black neighborhood where she lives and the wealthy predominantly white prep school she attends. The uneasy balance between these worlds is shattered when Starr witnesses the fatal shooting of her childhood best friend by a police officer.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Race relations</subfield>
+      <subfield code="v">Fiction.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Police shootings</subfield>
+      <subfield code="v">Fiction.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Activism</subfield>
+      <subfield code="v">Fiction.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 9: Gardening -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1009</controlfield>
+    <controlfield tag="008">200101s2020    mnua     b    001 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9781635861365</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Damrosch, Barbara,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="4">
+      <subfield code="a">The four-season harvest :</subfield>
+      <subfield code="b">organic vegetables from your home garden all year long /</subfield>
+      <subfield code="c">Barbara Damrosch.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">White River Junction, VT :</subfield>
+      <subfield code="b">Chelsea Green Publishing,</subfield>
+      <subfield code="c">2020.</subfield>
+    </datafield>
+    <datafield tag="505" ind1="0" ind2=" ">
+      <subfield code="a">Planning your garden -- Spring planting -- Summer crops -- Fall harvest -- Winter growing -- Cold frames and greenhouses -- Seed saving.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">A comprehensive guide to year-round vegetable gardening using organic methods, cold frames, and succession planting techniques for temperate climates.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Vegetable gardening.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Organic gardening.</subfield>
+    </datafield>
+  </record>
+
+  <!-- Record 10: Music biography -->
+  <record>
+    <leader>00000nam a2200000 a 4500</leader>
+    <controlfield tag="001">1010</controlfield>
+    <controlfield tag="008">150101s2015    nyub     b    001 0 eng d</controlfield>
+    <datafield tag="020" ind1=" " ind2=" ">
+      <subfield code="a">9780316003384</subfield>
+    </datafield>
+    <datafield tag="100" ind1="1" ind2=" ">
+      <subfield code="a">Patti Smith,</subfield>
+      <subfield code="e">author.</subfield>
+    </datafield>
+    <datafield tag="245" ind1="1" ind2="0">
+      <subfield code="a">Just kids /</subfield>
+      <subfield code="c">Patti Smith.</subfield>
+    </datafield>
+    <datafield tag="264" ind1=" " ind2="1">
+      <subfield code="a">New York :</subfield>
+      <subfield code="b">Ecco,</subfield>
+      <subfield code="c">2010.</subfield>
+    </datafield>
+    <datafield tag="520" ind1=" " ind2=" ">
+      <subfield code="a">A memoir of the friendship between Patti Smith and Robert Mapplethorpe in late 1960s and 1970s New York, tracing their artistic development and the downtown art scene.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Rock musicians</subfield>
+      <subfield code="z">United States</subfield>
+      <subfield code="v">Biography.</subfield>
+    </datafield>
+    <datafield tag="650" ind1=" " ind2="0">
+      <subfield code="a">Artists</subfield>
+      <subfield code="z">New York (State)</subfield>
+      <subfield code="z">New York.</subfield>
+    </datafield>
+    <datafield tag="600" ind1="1" ind2="0">
+      <subfield code="a">Mapplethorpe, Robert.</subfield>
+    </datafield>
+  </record>
+
+</collection>

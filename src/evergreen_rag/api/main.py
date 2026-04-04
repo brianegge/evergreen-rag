@@ -1,0 +1,45 @@
+"""FastAPI application factory and lifespan management."""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI
+
+from evergreen_rag.api.routes import router
+from evergreen_rag.embedding.service import EmbeddingService
+from evergreen_rag.search.vector_search import VectorSearch
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Manage application startup and shutdown."""
+    # Startup
+    logger.info("Starting up RAG service")
+    app.state.embedding_service = EmbeddingService()
+    app.state.vector_search = VectorSearch()
+    app.state.vector_search.open()
+    logger.info("RAG service started")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down RAG service")
+    app.state.vector_search.close()
+    logger.info("RAG service stopped")
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application."""
+    app = FastAPI(
+        title="Evergreen RAG",
+        description="Retrieval-Augmented Generation for Evergreen ILS Search",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+    app.include_router(router)
+    return app

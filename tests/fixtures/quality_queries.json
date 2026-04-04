@@ -1,0 +1,70 @@
+[
+  {
+    "id": "q01",
+    "query": "books about coping with grief and loss",
+    "expected_records": [1007],
+    "description": "Natural language query should match grief/bereavement book"
+  },
+  {
+    "id": "q02",
+    "query": "children's book about a wizard school",
+    "expected_records": [1002],
+    "description": "Semantic match: 'wizard school' -> Hogwarts"
+  },
+  {
+    "id": "q03",
+    "query": "how DNA and heredity shape who we are",
+    "expected_records": [1003],
+    "description": "Semantic match: DNA/heredity -> genetics/genes"
+  },
+  {
+    "id": "q04",
+    "query": "learning to cook with basic principles",
+    "expected_records": [1004],
+    "description": "Semantic match: cooking principles -> salt/fat/acid/heat"
+  },
+  {
+    "id": "q05",
+    "query": "racial justice and fighting discrimination",
+    "expected_records": [1001, 1008],
+    "description": "Should match both antiracism and race relations fiction"
+  },
+  {
+    "id": "q06",
+    "query": "impact of robots and computers on jobs",
+    "expected_records": [1006],
+    "description": "Semantic match: robots/computers/jobs -> automation/AI/labor"
+  },
+  {
+    "id": "q07",
+    "query": "growing vegetables in winter",
+    "expected_records": [1009],
+    "description": "Semantic match: winter vegetables -> four-season harvest"
+  },
+  {
+    "id": "q08",
+    "query": "punk rock memoir new york city",
+    "expected_records": [1010],
+    "description": "Semantic match: punk rock NYC memoir -> Patti Smith"
+  },
+  {
+    "id": "q09",
+    "query": "poetry about american democracy",
+    "expected_records": [1005],
+    "description": "Semantic match: democracy poetry -> inaugural poem"
+  },
+  {
+    "id": "q10",
+    "query": "teenager dealing with police violence",
+    "expected_records": [1008],
+    "description": "Semantic match: teen/police violence -> The Hate U Give"
+  },
+  {
+    "id": "q_neg_01",
+    "query": "underwater basket weaving techniques",
+    "expected_records": [],
+    "excluded_records": [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010],
+    "min_similarity_threshold": 0.7,
+    "description": "Negative: unrelated query should not match any records above threshold"
+  }
+]
