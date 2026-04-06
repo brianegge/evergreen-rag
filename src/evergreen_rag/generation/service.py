@@ -24,18 +24,24 @@ class GenerationService:
 
     TEMPLATES: dict[str, str] = {
         "summarize": (
-            "You are a friendly library assistant helping a patron. "
-            "They searched for: \"{query}\"\n\n"
+            "You are a library catalog search assistant. "
+            "The search query was: \"{query}\"\n\n"
             "Here are the matching catalog records:\n\n{results}\n\n"
-            "Write a brief, natural 2-3 sentence response. "
+            "Write 2-3 sentences that help someone browsing decide what to look at. "
+            "Briefly describe what each recommended title is about or what makes it "
+            "distinctive — don't just say it's relevant, say WHY. "
+            "Write in a neutral, informative tone like a librarian's shelf note. "
             "IMPORTANT: When you mention a catalog record, you MUST use the "
-            "exact token ###N### where N is the numeric record ID from the results above. "
-            "For example, if a result says 'record #247', write ###247### in your response. "
-            "The display system will replace ###247### with the formatted linked title. "
+            "exact token «N» where N is the numeric record ID from the results above. "
+            "For example, if a result says 'record #247', write «247» in your response. "
+            "The display system will replace «247» with the formatted linked title. "
             "Do NOT write out the actual title text yourself. "
-            "Mention 2-3 of the most relevant records using their ###N### tokens. "
+            "Mention 2-3 of the most relevant records using their «N» tokens. "
             "Keep it concise. Do NOT start with a greeting or filler phrase. "
-            "Do NOT list every record. Do NOT repeat similarity scores."
+            "Do NOT list every record. Do NOT repeat similarity scores. "
+            "Do NOT say 'most relevant' or 'pertains to your search'. "
+            "If only a few records are provided, just recommend those — "
+            "do not pad with filler."
         ),
         "recommend": (
             "You are a knowledgeable library reader's advisor. "
@@ -66,7 +72,7 @@ class GenerationService:
         self.ollama_url = ollama_url or os.environ.get(
             "OLLAMA_URL", "http://localhost:11434"
         )
-        self.model = model or os.environ.get("GENERATION_MODEL", "llama3.2")
+        self.model = model or os.environ.get("GENERATION_MODEL", "qwen2.5:3b")
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout

@@ -16,6 +16,7 @@ from evergreen_rag.api.routes import router
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 from evergreen_rag.embedding.service import EmbeddingService
 from evergreen_rag.generation.service import GenerationService
+from evergreen_rag.ingest.listener import IngestListener
 from evergreen_rag.search.vector_search import VectorSearch
 
 logger = logging.getLogger(__name__)
@@ -49,12 +50,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             exc_info=True,
         )
 
+    # Start auto-ingest listener (LISTEN/NOTIFY on biblio.record_entry changes)
+    try:
+        ingest_listener = IngestListener(
+            embedding_service=app.state.embedding_service,
+        )
+        ingest_listener.start()
+        app.state.ingest_listener = ingest_listener
+        logger.info("Auto-ingest listener started")
+    except Exception:
+        app.state.ingest_listener = None
+        logger.info("Auto-ingest listener not started", exc_info=True)
+
     logger.info("RAG service started")
 
     yield
 
     # Shutdown
     logger.info("Shutting down RAG service")
+    if getattr(app.state, "ingest_listener", None) is not None:
+        app.state.ingest_listener.stop()
     app.state.vector_search.close()
     logger.info("RAG service stopped")
 

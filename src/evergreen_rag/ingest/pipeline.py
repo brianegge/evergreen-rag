@@ -73,11 +73,12 @@ class IngestPipeline:
 
         with psycopg.connect(self.db_url) as conn:
             rows = self._fetch_records(conn, record_ids, full)
-            stats.total = len(rows)
-            logger.info("Fetched %d records to process", stats.total)
+        stats.total = len(rows)
+        logger.info("Fetched %d records to process", stats.total)
 
-            for batch_start in range(0, len(rows), self.batch_size):
-                batch = rows[batch_start : batch_start + self.batch_size]
+        for batch_start in range(0, len(rows), self.batch_size):
+            batch = rows[batch_start : batch_start + self.batch_size]
+            with psycopg.connect(self.db_url) as conn:
                 self._process_batch(conn, batch, stats)
 
         stats.finished_at = datetime.now(timezone.utc)

@@ -196,14 +196,17 @@ async def search(
         ) from exc
 
     generated_text = None
-    if body.generate and response.results:
+    strong_results = [
+        r for r in response.results if r.similarity >= 0.55
+    ]
+    if body.generate and strong_results:
         gen_service = getattr(
             request.app.state, "generation_service", None
         )
         if gen_service is not None:
             try:
                 generated_text = gen_service.summarize(
-                    body.query, response.results
+                    body.query, strong_results
                 )
             except Exception:
                 logger.debug(
@@ -249,6 +252,52 @@ async def search_stream(
             status_code=503, detail=f"Search error: {exc}"
         ) from exc
 
+    def _build_record_lookup(results):
+        """Build a dict mapping record_id to title/author for link expansion."""
+        lookup = {}
+        for r in results:
+            lines = r.chunk_text.split("\n")
+            title = lines[0].removeprefix("Title: ").strip() if lines else "Untitled"
+            author = ""
+            for line in lines[1:]:
+                if line.startswith("by "):
+                    author = line[3:].strip()
+                    break
+            lookup[str(r.record_id)] = (title, author)
+        return lookup
+
+    def _expand_token_buffer(buf, record_lookup, flush_all=False):
+        """Expand \u00abN\u00bb tokens in buffer, return (expanded_html, remaining_buffer)."""
+        import re
+        expanded = ""
+        while True:
+            m = re.search(r"\u00ab(\d+)\u00bb", buf)
+            if m:
+                expanded += _esc(buf[:m.start()])
+                rid = m.group(1)
+                if rid in record_lookup:
+                    title, author = record_lookup[rid]
+                    link = (
+                        f'<a href="/eg/opac/record/{rid}" '
+                        f'style="color:#1565c0;text-decoration:underline">'
+                        f'{_esc(title)}</a>'
+                    )
+                    if author:
+                        link += f' <span style="color:#888;font-size:12px">by {_esc(author)}</span>'
+                    expanded += link
+                else:
+                    expanded += _esc(m.group(0))
+                buf = buf[m.end():]
+            else:
+                break
+        if flush_all:
+            expanded += _esc(buf)
+            buf = ""
+        return expanded, buf
+
+    def _esc(s):
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
     def event_stream():
         # Send search results first
         results_data = {
@@ -266,20 +315,39 @@ async def search_stream(
         }
         yield f"event: results\ndata: {json.dumps(results_data)}\n\n"
 
-        # Stream generation tokens if requested
-        if body.generate and response.results:
+        # Stream generation tokens, expanding record refs server-side
+        # Filter to strong matches for LLM context (keep all for client)
+        strong_results = [
+            r for r in response.results if r.similarity >= 0.55
+        ]
+        if body.generate and strong_results:
             gen_service = getattr(
                 request.app.state, "generation_service", None
             )
             if gen_service is not None:
+                record_lookup = _build_record_lookup(response.results)
+                buf = ""
                 try:
                     for token in gen_service.stream_generate(
-                        "summarize", body.query, response.results
+                        "summarize", body.query, strong_results
                     ):
-                        yield (
-                            f"event: token\n"
-                            f"data: {json.dumps({'text': token})}\n\n"
-                        )
+                        buf += token
+                        # Only flush when we're not mid-token (no open «)
+                        if "\u00ab" not in buf or "\u00bb" in buf:
+                            expanded, buf = _expand_token_buffer(buf, record_lookup)
+                            if expanded:
+                                yield (
+                                    f"event: token\n"
+                                    f"data: {json.dumps({'html': expanded})}\n\n"
+                                )
+                    # Flush remaining buffer
+                    if buf:
+                        expanded, _ = _expand_token_buffer(buf, record_lookup, flush_all=True)
+                        if expanded:
+                            yield (
+                                f"event: token\n"
+                                f"data: {json.dumps({'html': expanded})}\n\n"
+                            )
                     yield "event: done\ndata: {}\n\n"
                 except Exception:
                     logger.debug(
@@ -437,7 +505,21 @@ async def search_merged(body: MergedSearchRequest, request: Request) -> SearchRe
 
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest(body: IngestRequest, request: Request) -> IngestResponse:
-    """Trigger ingest for specified records or full re-ingest."""
+    """Trigger ingest for specified records or full re-ingest.
+
+    Restricted to local/private network requests only.
+    """
+    from ipaddress import ip_address, ip_network
+
+    client_ip = request.client.host if request.client else "0.0.0.0"
+    allowed_nets = [
+        ip_network("127.0.0.0/8"),
+        ip_network("10.0.0.0/8"),
+        ip_network("192.168.0.0/16"),
+    ]
+    if not any(ip_address(client_ip) in net for net in allowed_nets):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     from evergreen_rag.ingest.pipeline import IngestPipeline
 
     embedding_service = request.app.state.embedding_service

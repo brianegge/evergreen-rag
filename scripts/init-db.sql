@@ -52,3 +52,35 @@ CREATE TABLE IF NOT EXISTS rag.ingest_log (
     started_at      TIMESTAMPTZ,
     completed_at    TIMESTAMPTZ
 );
+
+-- Notify the RAG service when bib records change.
+-- Payload format: "upsert:<id>" or "delete:<id>"
+CREATE OR REPLACE FUNCTION biblio.notify_rag_ingest()
+RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM pg_notify('rag_ingest', 'delete:' || OLD.id::text);
+        RETURN OLD;
+    END IF;
+
+    -- Treat soft-deleted or NULL-marc records as deletes
+    IF NEW.deleted OR NEW.marc IS NULL THEN
+        PERFORM pg_notify('rag_ingest', 'delete:' || NEW.id::text);
+    ELSE
+        PERFORM pg_notify('rag_ingest', 'upsert:' || NEW.id::text);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_rag_ingest ON biblio.record_entry;
+CREATE TRIGGER trg_rag_ingest
+    AFTER INSERT OR UPDATE OF marc, deleted ON biblio.record_entry
+    FOR EACH ROW
+    EXECUTE FUNCTION biblio.notify_rag_ingest();
+
+DROP TRIGGER IF EXISTS trg_rag_ingest_delete ON biblio.record_entry;
+CREATE TRIGGER trg_rag_ingest_delete
+    AFTER DELETE ON biblio.record_entry
+    FOR EACH ROW
+    EXECUTE FUNCTION biblio.notify_rag_ingest();
