@@ -12,12 +12,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from evergreen_rag.api.routes import router
-
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 from evergreen_rag.embedding.service import EmbeddingService
 from evergreen_rag.generation.service import GenerationService
 from evergreen_rag.ingest.listener import IngestListener
 from evergreen_rag.search.vector_search import VectorSearch
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 logger = logging.getLogger(__name__)
 

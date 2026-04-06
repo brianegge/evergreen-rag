@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import defaultdict
 from typing import Any
-
-import json
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
