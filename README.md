@@ -14,6 +14,8 @@ Traditional library catalog search works by matching **exact keywords** — if a
 
 The result: patrons can search the way they naturally think and speak, and the catalog responds with relevant materials — even for misspellings, synonyms, mood-based queries ("something funny to read on vacation"), and conceptual searches ("video game movie").
 
+All AI models run **locally** — no cloud APIs, no data leaves your network.
+
 ## RAG vs. Keyword Search — Test Results
 
 Tested against a catalog of 100,000 MARC records (SFPL dataset):
@@ -36,7 +38,7 @@ Keyword search returned **0 results on 7 out of 8 non-trivial queries**. RAG fou
 ```mermaid
 graph TD
     Browser["Evergreen OPAC<br/>(browser)"]
-    RAG["RAG Service<br/>(FastAPI container)"]
+    RAG["RAG Service<br/>(container)"]
     Ollama["Ollama<br/>(GPU)"]
     PG["PostgreSQL + pgvector"]
 
@@ -61,52 +63,14 @@ graph TD
 
 The RAG service is a **sidecar** — it requires no modifications to Evergreen's codebase. It reads MARC records from the existing database, maintains its own vector index, and integrates with the OPAC via a JavaScript snippet injected into the results template.
 
-## Quick Start
+## Requirements
 
-### Container (recommended)
+- [Docker](https://docs.docker.com/get-docker/) or [Podman](https://podman.io/)
+- PostgreSQL 14+ with [pgvector](https://github.com/pgvector/pgvector)
+- [Ollama](https://ollama.com/) with a GPU (or CPU, but slower)
+- Evergreen ILS (for OPAC integration; RAG service works standalone)
 
-```bash
-# Prerequisites: PostgreSQL 16 + pgvector, Ollama with models
-docker run -d --name evergreen-rag \
-  -e DATABASE_URL=postgresql://evergreen:evergreen@db-host:5432/evergreen_rag \
-  -e OLLAMA_URL=http://ollama-host:11434 \
-  -e EMBEDDING_MODEL=mxbai-embed-large \
-  -e GENERATION_MODEL=qwen2.5:7b \
-  -p 8000:8000 \
-  ghcr.io/brianegge/evergreen-rag:latest
-```
-
-### From source
-
-```bash
-# Prerequisites: Python 3.11+, PostgreSQL 16 + pgvector, Ollama with models
-
-# Install
-pip install -e ".[dev]"
-
-# Configure
-cat > .env << EOF
-DATABASE_URL=postgresql://evergreen:evergreen@localhost:5432/evergreen_rag
-OLLAMA_URL=http://localhost:11434
-EMBEDDING_MODEL=mxbai-embed-large
-GENERATION_MODEL=qwen2.5:7b
-EOF
-
-# Initialize database schema
-psql -U evergreen evergreen_rag < scripts/init-db.sql
-
-# Start
-source .env
-uvicorn evergreen_rag.api.main:app --host 0.0.0.0 --port 8000
-
-# Ingest records (builds vector embeddings)
-curl -X POST http://localhost:8000/ingest -H 'Content-Type: application/json' \
-  -d '{"all": true}'
-
-# Search
-curl -X POST http://localhost:8000/search -H 'Content-Type: application/json' \
-  -d '{"query": "books about coping with grief for teenagers", "limit": 10, "generate": true}'
-```
+See the [Installation Guide](docs/installation.md) for step-by-step setup, hardware sizing, and model recommendations.
 
 ## API Endpoints
 
@@ -130,39 +94,7 @@ The RAG service integrates with Evergreen's OPAC by injecting a streaming search
 3. Expands record references into clickable links to the catalog
 4. Shows related search suggestions
 
-No Evergreen code changes required — just an Apache reverse proxy and a template include:
-
-```apache
-# In Evergreen's Apache config
-ProxyPass /rag http://rag-service-host:8000
-ProxyPassReverse /rag http://rag-service-host:8000
-```
-
-```html
-<!-- In opac/parts/result/table.tt2 and lowhits.tt2 -->
-[% INCLUDE "opac/parts/result/rag_streaming.tt2" %]
-```
-
-## Project Structure
-
-```
-src/evergreen_rag/
-  api/          # FastAPI HTTP endpoints
-  embedding/    # Ollama embedding service wrapper
-  extractor/    # MARC-XML text extraction
-  generation/   # LLM summarization and recommendations
-  ingest/       # Batch ingest and LISTEN/NOTIFY listener
-  models/       # Shared Pydantic models
-  search/       # pgvector similarity search
-  static/       # Standalone search UI, OPAC/staff integration JS
-```
-
-## Requirements
-
-- Python 3.11+
-- PostgreSQL 14+ with [pgvector](https://github.com/pgvector/pgvector)
-- [Ollama](https://ollama.com/) with embedding and generation models
-- Evergreen ILS (for OPAC integration; RAG service works standalone)
+No Evergreen code changes required — just an Apache reverse proxy and a template include. See the [Installation Guide](docs/installation.md#7-integrate-with-evergreen-opac-optional) for details.
 
 ## License
 
