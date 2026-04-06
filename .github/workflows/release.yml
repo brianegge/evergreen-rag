@@ -2,41 +2,84 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
-  container:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if release already exists for today
+        id: check
+        run: |
+          today=$(date -u +%Y.%-m.%-d)
+          if gh release view "v${today}" &>/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "version=${today}" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
+        if: steps.check.outputs.skip == 'false'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
+        if: steps.check.outputs.skip == 'false'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: meta
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push
+      - name: Build and push container
+        if: steps.check.outputs.skip == 'false'
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}
+            ghcr.io/${{ github.repository }}:${{ steps.check.outputs.version }}
             ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Generate release notes
+        if: steps.check.outputs.skip == 'false'
+        id: notes
+        run: |
+          prev_tag=$(git tag --sort=-creatordate | head -1)
+          if [ -n "$prev_tag" ]; then
+            range="${prev_tag}..HEAD"
+          else
+            range="HEAD"
+          fi
+          echo "notes<<NOTES_EOF" >> "$GITHUB_OUTPUT"
+          echo "## Container" >> "$GITHUB_OUTPUT"
+          echo '```bash' >> "$GITHUB_OUTPUT"
+          echo "docker pull ghcr.io/${{ github.repository }}:${{ steps.check.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo '```' >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "## Changes" >> "$GITHUB_OUTPUT"
+          git log --oneline --no-merges $range >> "$GITHUB_OUTPUT"
+          echo "NOTES_EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          gh release create "v${{ steps.check.outputs.version }}" \
+            --title "v${{ steps.check.outputs.version }}" \
+            --notes "${{ steps.notes.outputs.notes }}" \
+            --target main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
