@@ -14,7 +14,11 @@ Traditional library catalog search works by matching **exact keywords** — if a
 
 The result: patrons can search the way they naturally think and speak, and the catalog responds with relevant materials — even for misspellings, synonyms, mood-based queries ("something funny to read on vacation"), and conceptual searches ("video game movie").
 
-All AI models run **locally** — no cloud APIs, no data leaves your network.
+## Privacy First
+
+**Every part of this system runs on your own servers.** No patron queries, search history, or catalog data are ever sent to a cloud service. The AI models run locally via [Ollama](https://ollama.com/) on hardware you control.
+
+This matters because libraries have a [long tradition](https://www.ala.org/advocacy/privacy) of protecting patron privacy. Unlike cloud-based AI search products, Evergreen RAG ensures that what patrons search for stays between them and their library — no third-party data processing, no API calls to external services, no telemetry.
 
 ## RAG vs. Keyword Search — Test Results
 
