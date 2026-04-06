@@ -24,6 +24,8 @@ This matters because libraries have a [long tradition](https://www.ala.org/advoc
 
 Tested against a catalog of 100,000 MARC records (SFPL dataset):
 
+![RAG vs Keyword Search Results](docs/rag-search-results.png)
+
 | # | Query | Keyword | RAG | Winner |
 |---|-------|---------|-----|--------|
 | 1 | harry potter | 2 results (exact match) | 3 results (HP + related wizard books) | Tie — both found relevant results, RAG added breadth |
