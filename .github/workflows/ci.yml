@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff
+      - run: ruff check src/ tests/
+
+  build-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container image
+        run: docker build -t evergreen-rag:test .
+      - name: Verify image starts
+        run: |
+          docker run -d --name rag-test \
+            -e DATABASE_URL=postgresql://test:test@localhost/test \
+            -e OLLAMA_URL=http://localhost:11434 \
+            evergreen-rag:test || true
+          sleep 3
+          docker logs rag-test 2>&1 | head -20
+          docker rm -f rag-test

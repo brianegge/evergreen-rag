@@ -33,34 +33,53 @@ Keyword search returned **0 results on 7 out of 8 non-trivial queries**. RAG fou
 
 ## How It Works
 
-```
-Evergreen OPAC (browser)
-  Patron searches --> results page loads
-  RAG streams AI results above keyword results
-             |
-             | POST /search/stream
-             v
-RAG Service (FastAPI, Python)
-  1. Embed query via Ollama
-  2. Vector similarity search (pgvector)
-  3. Stream LLM response with linked titles
-       |              |
-       v              v
-    Ollama         PostgreSQL + pgvector
-    (GPU)          rag.biblio_embedding (100k vectors)
-                   biblio.record_entry (MARC records)
-  Embed model:
-    mxbai-embed-large
-  Generation model:
-    qwen2.5:7b
+```mermaid
+graph TD
+    Browser["Evergreen OPAC<br/>(browser)"]
+    RAG["RAG Service<br/>(FastAPI container)"]
+    Ollama["Ollama<br/>(GPU)"]
+    PG["PostgreSQL + pgvector"]
+
+    Browser -->|"POST /search/stream"| RAG
+    RAG -->|"1. Embed query"| Ollama
+    RAG -->|"2. Vector similarity search"| PG
+    RAG -->|"3. Stream LLM summary"| Ollama
+    RAG -->|"SSE: linked titles + suggestions"| Browser
+
+    subgraph Models
+        Embed["mxbai-embed-large<br/>(embeddings)"]
+        Gen["qwen2.5:7b<br/>(generation)"]
+    end
+    Ollama --- Models
+
+    subgraph Database
+        Vectors["rag.biblio_embedding<br/>(100k vectors)"]
+        MARC["biblio.record_entry<br/>(MARC records)"]
+    end
+    PG --- Database
 ```
 
 The RAG service is a **sidecar** — it requires no modifications to Evergreen's codebase. It reads MARC records from the existing database, maintains its own vector index, and integrates with the OPAC via a JavaScript snippet injected into the results template.
 
 ## Quick Start
 
+### Container (recommended)
+
 ```bash
 # Prerequisites: PostgreSQL 16 + pgvector, Ollama with models
+docker run -d --name evergreen-rag \
+  -e DATABASE_URL=postgresql://evergreen:evergreen@db-host:5432/evergreen_rag \
+  -e OLLAMA_URL=http://ollama-host:11434 \
+  -e EMBEDDING_MODEL=mxbai-embed-large \
+  -e GENERATION_MODEL=qwen2.5:7b \
+  -p 8000:8000 \
+  ghcr.io/brianegge/evergreen-rag:latest
+```
+
+### From source
+
+```bash
+# Prerequisites: Python 3.11+, PostgreSQL 16 + pgvector, Ollama with models
 
 # Install
 pip install -e ".[dev]"

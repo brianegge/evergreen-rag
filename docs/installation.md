@@ -148,22 +148,36 @@ sudo systemctl restart ollama
 
 ### 3. Install the RAG Service
 
+#### Option A: Container (recommended for production)
+
 ```bash
-# Clone
+docker run -d --name evergreen-rag \
+  -e DATABASE_URL=postgresql://evergreen:evergreen@db-host:5432/evergreen_rag \
+  -e OLLAMA_URL=http://ollama-host:11434 \
+  -e EMBEDDING_MODEL=mxbai-embed-large \
+  -e GENERATION_MODEL=qwen2.5:7b \
+  -p 8000:8000 \
+  --restart=always \
+  ghcr.io/brianegge/evergreen-rag:latest
+```
+
+That's it. No Python, no virtual environments, no dependencies to install.
+
+#### Option B: From source (for development)
+
+```bash
 git clone https://github.com/brianegge/evergreen-rag.git
 cd evergreen-rag
-
-# Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Install
 pip install -e ".[dev]"
 ```
 
 ### 4. Configure
 
-Create a `.env` file:
+For container deployments, pass environment variables with `-e` flags (see above).
+
+For source installs, create a `.env` file:
 
 ```bash
 DATABASE_URL=postgresql://evergreen:evergreen@localhost:5432/evergreen_rag
